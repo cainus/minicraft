@@ -1,0 +1,19 @@
+src/main.ts
+  s_3a1216b782efea::t_afb6c1a82b9864 54,183,186,196,198
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "a4512b5afbbc49bf2064b9e4e3cf27bf2fc141c0",
+  "prompts": {},
+  "sessions": {
+    "s_3a1216b782efea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f0bb5-2448-7f12-99c3-d27249db88b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Greggory Caines <gregg@caines.ca>"
+    }
+  }
+}
