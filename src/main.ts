@@ -41,12 +41,32 @@ type MovingPerson = {
   phase: number
 }
 
+type AvatarClothes = {
+  skin: string
+  shirt: string
+  pants: string
+  shoes: string
+  hat: string
+}
+
 const CELL = 1
 const ROOM_SIZE = 14
 const LAND_SIZE = 180
 const STORAGE_KEY = 'minicraft-room-v1'
+const AVATAR_STORAGE_KEY = 'minicraft-avatar-v1'
 const objectMeshes = new Map<number, THREE.Group>()
 const movingPeople: MovingPerson[] = []
+const pressedKeys = new Set<string>()
+const defaultAvatarClothes: AvatarClothes = {
+  skin: '#bf855c',
+  shirt: '#2f7d66',
+  pants: '#345c83',
+  shoes: '#2b2420',
+  hat: '#d78b3d',
+}
+let avatarClothes = loadAvatarClothes()
+let playerAvatar: THREE.Group
+let avatarMaterials: Record<keyof AvatarClothes, THREE.MeshStandardMaterial>
 
 const categories: Category[] = ['seating', 'tables', 'storage', 'sleep', 'kitchen', 'decor', 'plants', 'lighting', 'outdoor']
 
@@ -95,6 +115,7 @@ let rotation = 0
 let placedPieces: PlacedPiece[] = []
 let nextPlacedId = 1
 let hoveredObjectId: number | null = null
+let lastFrameTime = performance.now() / 1000
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <main class="game-shell">
@@ -103,7 +124,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div class="hud">
         <div>
           <strong>Minicraft</strong>
-          <span id="status">Pick a decoration, then click the garden plaza.</span>
+          <span id="status">WASD or arrows move your character. Walk into cutaway houses to see furniture.</span>
         </div>
         <div class="hud-actions">
           <button id="rotate" type="button" title="Rotate selected piece">Rotate</button>
@@ -115,12 +136,25 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <aside class="tool-panel">
       <header>
         <h1>Decorate</h1>
-        <p>Decorate a lakeside voxel park filled with trees, flowers, families, kids, and elders.</p>
+        <p>Decorate a lakeside voxel park, design your character, and explore furnished village homes.</p>
       </header>
       <div class="stats">
         <span><b id="piece-count">0</b> placed</span>
         <span><b>${pieces.length}</b> pieces</span>
       </div>
+      <section class="avatar-designer" aria-label="Player clothes designer">
+        <div>
+          <h2>Your Character</h2>
+          <button id="reset-avatar" type="button">Reset</button>
+        </div>
+        <div class="color-controls">
+          <label>Skin <input id="skin-color" type="color" value="${avatarClothes.skin}" /></label>
+          <label>Shirt <input id="shirt-color" type="color" value="${avatarClothes.shirt}" /></label>
+          <label>Pants <input id="pants-color" type="color" value="${avatarClothes.pants}" /></label>
+          <label>Shoes <input id="shoes-color" type="color" value="${avatarClothes.shoes}" /></label>
+          <label>Hat <input id="hat-color" type="color" value="${avatarClothes.hat}" /></label>
+        </div>
+      </section>
       <div class="category-tabs" id="categories"></div>
       <div class="piece-grid" id="palette"></div>
     </aside>
@@ -135,6 +169,14 @@ const paletteEl = document.querySelector<HTMLDivElement>('#palette')!
 const rotateButton = document.querySelector<HTMLButtonElement>('#rotate')!
 const removeButton = document.querySelector<HTMLButtonElement>('#remove-mode')!
 const clearButton = document.querySelector<HTMLButtonElement>('#clear')!
+const resetAvatarButton = document.querySelector<HTMLButtonElement>('#reset-avatar')!
+const avatarInputs: Record<keyof AvatarClothes, HTMLInputElement> = {
+  skin: document.querySelector<HTMLInputElement>('#skin-color')!,
+  shirt: document.querySelector<HTMLInputElement>('#shirt-color')!,
+  pants: document.querySelector<HTMLInputElement>('#pants-color')!,
+  shoes: document.querySelector<HTMLInputElement>('#shoes-color')!,
+  hat: document.querySelector<HTMLInputElement>('#hat-color')!,
+}
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#a7c7d7')
@@ -182,6 +224,8 @@ const grid = new THREE.GridHelper(ROOM_SIZE, ROOM_SIZE, '#7d8b79', '#aeb79b')
 grid.position.y = 0.012
 scene.add(grid)
 
+playerAvatar = createPlayerAvatar()
+
 const sun = new THREE.DirectionalLight('#fff5df', 2.7)
 sun.position.set(4, 9, 6)
 sun.castShadow = true
@@ -216,6 +260,68 @@ function addBlock(parent: THREE.Group | THREE.Scene, x: number, y: number, z: nu
   block.receiveShadow = true
   parent.add(block)
   return block
+}
+
+function addMaterialBlock(parent: THREE.Group, x: number, y: number, z: number, w: number, h: number, d: number, material: THREE.Material) {
+  const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+  block.position.set(x, y, z)
+  block.castShadow = true
+  block.receiveShadow = true
+  parent.add(block)
+  return block
+}
+
+function loadAvatarClothes(): AvatarClothes {
+  const raw = localStorage.getItem(AVATAR_STORAGE_KEY)
+  if (!raw) return { ...defaultAvatarClothes }
+  try {
+    return { ...defaultAvatarClothes, ...JSON.parse(raw) }
+  } catch {
+    return { ...defaultAvatarClothes }
+  }
+}
+
+function saveAvatarClothes() {
+  localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(avatarClothes))
+}
+
+function createPlayerAvatar() {
+  const avatar = new THREE.Group()
+  avatar.name = 'player avatar'
+  avatar.position.set(0, 0, -3.4)
+  avatar.rotation.y = Math.PI
+
+  avatarMaterials = {
+    skin: new THREE.MeshStandardMaterial({ color: avatarClothes.skin, roughness: 0.78 }),
+    shirt: new THREE.MeshStandardMaterial({ color: avatarClothes.shirt, roughness: 0.78 }),
+    pants: new THREE.MeshStandardMaterial({ color: avatarClothes.pants, roughness: 0.78 }),
+    shoes: new THREE.MeshStandardMaterial({ color: avatarClothes.shoes, roughness: 0.78 }),
+    hat: new THREE.MeshStandardMaterial({ color: avatarClothes.hat, roughness: 0.78 }),
+  }
+
+  addMaterialBlock(avatar, -0.16, 0.22, 0, 0.18, 0.44, 0.18, avatarMaterials.pants)
+  addMaterialBlock(avatar, 0.16, 0.22, 0, 0.18, 0.44, 0.18, avatarMaterials.pants)
+  addMaterialBlock(avatar, -0.16, 0.05, 0.04, 0.22, 0.1, 0.28, avatarMaterials.shoes)
+  addMaterialBlock(avatar, 0.16, 0.05, 0.04, 0.22, 0.1, 0.28, avatarMaterials.shoes)
+  addMaterialBlock(avatar, 0, 0.72, 0, 0.52, 0.56, 0.32, avatarMaterials.shirt)
+  addMaterialBlock(avatar, -0.38, 0.72, 0, 0.14, 0.46, 0.14, avatarMaterials.skin)
+  addMaterialBlock(avatar, 0.38, 0.72, 0, 0.14, 0.46, 0.14, avatarMaterials.skin)
+  addMaterialBlock(avatar, 0, 1.18, 0, 0.38, 0.36, 0.38, avatarMaterials.skin)
+  addMaterialBlock(avatar, 0, 1.42, 0, 0.48, 0.18, 0.48, avatarMaterials.hat)
+  addMaterialBlock(avatar, 0, 1.56, -0.03, 0.34, 0.2, 0.34, avatarMaterials.hat)
+  addBlock(avatar, -0.08, 1.18, 0.2, 0.05, 0.05, 0.04, '#202124')
+  addBlock(avatar, 0.08, 1.18, 0.2, 0.05, 0.05, 0.04, '#202124')
+
+  scene.add(avatar)
+  return avatar
+}
+
+function applyAvatarClothes() {
+  for (const key of Object.keys(avatarMaterials) as Array<keyof AvatarClothes>) {
+    avatarMaterials[key].color.set(avatarClothes[key])
+    avatarInputs[key].value = avatarClothes[key]
+  }
+  saveAvatarClothes()
 }
 
 function addLandscape() {
@@ -319,18 +425,39 @@ function addHouse(parent: THREE.Group, x: number, z: number, index: number) {
   const depth = 3.2 + ((index + 1) % 3) * 0.45
   const height = 2.2 + (index % 2) * 0.35
 
-  addBlock(house, 0, height / 2, 0, width, height, depth, walls)
-  addBlock(house, 0, height + 0.45, 0, width + 0.55, 0.55, depth + 0.55, roof)
-  addBlock(house, 0, height + 0.85, 0, width - 0.45, 0.42, depth - 0.25, roof)
+  addBlock(house, 0, 0.07, 0, width, 0.14, depth, '#d6c08e')
+  addBlock(house, 0, height / 2, -depth / 2, width, height, 0.18, walls)
+  addBlock(house, -width / 2, height / 2, 0, 0.18, height, depth, walls)
+  addBlock(house, width / 2, height / 2, 0, 0.18, height, depth, walls)
+  addBlock(house, -width * 0.36, height / 2, depth / 2, width * 0.28, height, 0.16, walls)
+  addBlock(house, width * 0.36, height / 2, depth / 2, width * 0.28, height, 0.16, walls)
+  addBlock(house, 0, height + 0.45, -depth * 0.12, width + 0.55, 0.55, depth * 0.78, roof)
+  addBlock(house, 0, height + 0.85, -depth * 0.12, width - 0.45, 0.42, depth * 0.6, roof)
   addBlock(house, 0, 0.72, depth / 2 + 0.04, 0.72, 1.25, 0.08, '#6b4b33')
   addBlock(house, -width * 0.28, 1.45, depth / 2 + 0.05, 0.55, 0.5, 0.08, '#8fd2e8')
   addBlock(house, width * 0.28, 1.45, depth / 2 + 0.05, 0.55, 0.5, 0.08, '#8fd2e8')
   addBlock(house, -width / 2 - 0.08, 1.25, 0, 0.08, 0.48, 0.72, '#8fd2e8')
   addBlock(house, width / 2 + 0.08, 1.25, 0, 0.08, 0.48, 0.72, '#8fd2e8')
   addBlock(house, width * 0.28, height + 1.18, -depth * 0.18, 0.42, 0.78, 0.42, '#6d5140')
+  addHouseFurniture(house, width, depth, index)
   addBlock(house, 0, 0.035, depth / 2 + 1.05, 1.25, 0.04, 1.6, '#cdbf8e')
   addFlower(house, -width / 2 - 0.45, depth / 2 + 0.2, '#e8526c')
   addFlower(house, width / 2 + 0.45, depth / 2 + 0.2, '#f7c948')
+}
+
+function addHouseFurniture(parent: THREE.Group, width: number, depth: number, index: number) {
+  addBlock(parent, -width * 0.26, 0.32, -depth * 0.2, 1.2, 0.28, 1.65, '#7b5632')
+  addBlock(parent, -width * 0.26, 0.55, -depth * 0.12, 1.1, 0.24, 1.15, ['#7e9aad', '#d95b51', '#6c8e6a'][index % 3])
+  addBlock(parent, -width * 0.26, 0.72, -depth * 0.55, 0.82, 0.22, 0.32, '#edf0e8')
+  addBlock(parent, width * 0.2, 0.55, -depth * 0.08, 0.92, 0.16, 0.72, '#a36d3b')
+  addBlock(parent, width * 0.02, 0.27, -depth * 0.08, 0.12, 0.5, 0.12, '#7b5632')
+  addBlock(parent, width * 0.44, 0.42, -depth * 0.08, 0.38, 0.18, 0.38, '#b77842')
+  addBlock(parent, width * 0.44, 0.78, -depth * 0.28, 0.38, 0.54, 0.12, '#b77842')
+  addBlock(parent, width * 0.31, 0.8, -depth / 2 + 0.18, 0.8, 1.25, 0.28, '#7b5632')
+  addBlock(parent, width * 0.16, 0.78, -depth / 2 + 0.35, 0.12, 0.3, 0.08, '#345c83')
+  addBlock(parent, width * 0.35, 0.9, -depth / 2 + 0.35, 0.12, 0.34, 0.08, '#d5b25f')
+  addBlock(parent, width * 0.52, 0.72, -depth / 2 + 0.35, 0.12, 0.28, 0.08, '#b2453d')
+  addBlock(parent, -width / 2 + 0.28, 0.58, depth * 0.22, 0.38, 0.82, 0.52, '#9c6f43')
 }
 
 function generatedPoint(index: number, offset: number, maxRadius: number) {
@@ -689,10 +816,29 @@ clearButton.addEventListener('click', () => {
   rebuildWorld()
 })
 
+for (const key of Object.keys(avatarInputs) as Array<keyof AvatarClothes>) {
+  avatarInputs[key].addEventListener('input', () => {
+    avatarClothes = { ...avatarClothes, [key]: avatarInputs[key].value }
+    applyAvatarClothes()
+    statusEl.textContent = 'Your character clothes updated.'
+  })
+}
+
+resetAvatarButton.addEventListener('click', () => {
+  avatarClothes = { ...defaultAvatarClothes }
+  applyAvatarClothes()
+  statusEl.textContent = 'Your character clothes reset.'
+})
+
 window.addEventListener('resize', resize)
 window.addEventListener('keydown', (event) => {
+  if (event.target instanceof HTMLInputElement) return
+  pressedKeys.add(event.key.toLowerCase())
   if (event.key.toLowerCase() === 'r') rotateButton.click()
   if (event.key === 'Backspace' || event.key === 'Delete') removeButton.click()
+})
+window.addEventListener('keyup', (event) => {
+  pressedKeys.delete(event.key.toLowerCase())
 })
 
 renderCategories()
@@ -716,8 +862,38 @@ function updateMovingPeople(time: number) {
   }
 }
 
+function updatePlayer(delta: number) {
+  const forward = Number(pressedKeys.has('w') || pressedKeys.has('arrowup')) - Number(pressedKeys.has('s') || pressedKeys.has('arrowdown'))
+  const strafe = Number(pressedKeys.has('d') || pressedKeys.has('arrowright')) - Number(pressedKeys.has('a') || pressedKeys.has('arrowleft'))
+  if (forward === 0 && strafe === 0) return
+
+  const speed = pressedKeys.has('shift') ? 7 : 4.2
+  const length = Math.hypot(forward, strafe)
+  const dx = (strafe / length) * speed * delta
+  const dz = (-forward / length) * speed * delta
+  const half = LAND_SIZE / 2 - 2
+  const nextX = THREE.MathUtils.clamp(playerAvatar.position.x + dx, -half, half)
+  const nextZ = THREE.MathUtils.clamp(playerAvatar.position.z + dz, -half, half)
+  const movedX = nextX - playerAvatar.position.x
+  const movedZ = nextZ - playerAvatar.position.z
+
+  playerAvatar.position.set(nextX, 0, nextZ)
+  if (Math.abs(movedX) + Math.abs(movedZ) > 0.0001) {
+    playerAvatar.rotation.y = Math.atan2(movedX, movedZ)
+    camera.position.x += movedX
+    camera.position.z += movedZ
+    controls.target.x += movedX
+    controls.target.z += movedZ
+    statusEl.textContent = isNearPlaza(nextX, nextZ, 1) ? 'Decorate the plaza, or walk to village homes.' : 'Exploring. Walk through house doors to see furniture.'
+  }
+}
+
 function animate() {
-  updateMovingPeople(performance.now() / 1000)
+  const time = performance.now() / 1000
+  const delta = Math.min(0.05, time - lastFrameTime)
+  lastFrameTime = time
+  updateMovingPeople(time)
+  updatePlayer(delta)
   controls.update()
   renderer.render(scene, camera)
   requestAnimationFrame(animate)

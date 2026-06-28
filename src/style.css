@@ -175,6 +175,63 @@ p {
   line-height: 1;
 }
 
+.avatar-designer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: #fff8eb;
+}
+
+.avatar-designer > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.avatar-designer h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.1;
+  letter-spacing: 0;
+}
+
+.avatar-designer button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.color-controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.color-controls label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.color-controls input {
+  width: 100%;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+}
+
 .category-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -291,5 +348,9 @@ p {
 
   .piece-grid {
     grid-template-columns: 1fr;
+  }
+
+  .color-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
