@@ -180,9 +180,9 @@ const avatarInputs: Record<keyof AvatarClothes, HTMLInputElement> = {
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#a7c7d7')
-scene.fog = new THREE.Fog('#a7c7d7', 120, 460)
+scene.fog = new THREE.Fog('#a7c7d7', 180, 760)
 
-const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 1000)
 camera.position.set(18, 42, 22)
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true })
@@ -193,7 +193,7 @@ renderer.shadowMap.type = THREE.PCFShadowMap
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.target.set(0, 0.8, 0)
 controls.enableDamping = true
-controls.maxPolarAngle = Math.PI * 0.34
+controls.maxPolarAngle = Math.PI * 0.28
 controls.minDistance = 5
 controls.maxDistance = 150
 controls.mouseButtons.RIGHT = THREE.MOUSE.PAN
