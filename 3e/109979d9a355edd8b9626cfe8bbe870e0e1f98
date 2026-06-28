@@ -1,0 +1,30 @@
+README.md
+  s_3a1216b782efea::t_46c64ba36d9356 9-11,18
+src/style.css
+  s_3a1216b782efea::t_34d8b8e1e4e052 178-234,352-354
+  s_3a1216b782efea::t_d9c10128e14999 355
+src/main.ts
+  s_3a1216b782efea::t_84a6f37b11e09f 59,118,127,139
+  s_3a1216b782efea::t_15148d17fee3ba 428-435,442,448-460
+  s_3a1216b782efea::t_ba8df27b166449 44-51,56,60-69,145-157,172-179
+  s_3a1216b782efea::t_45506c5778e845 461,819-832,835-836,840-842,865-890,892-896
+  s_3a1216b782efea::t_d9404c694b1da7 227-228
+  s_3a1216b782efea::t_0210a11d74c5c3 265-326
+  s_3a1216b782efea::t_f67a81a616ae97 462
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "3e109979d9a355edd8b9626cfe8bbe870e0e1f98",
+  "prompts": {},
+  "sessions": {
+    "s_3a1216b782efea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f0bb5-2448-7f12-99c3-d27249db88b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Greggory Caines <gregg@caines.ca>"
+    }
+  }
+}
