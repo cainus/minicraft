@@ -1,0 +1,27 @@
+.gitignore
+  s_3a1216b782efea::t_f71d7b2f0be2a4 1-24
+package-lock.json
+  s_3a1216b782efea::t_5794c74d99eeb0 1-995
+package.json
+  s_3a1216b782efea::t_70b858e6c8fa8c 1-20
+public/favicon.svg
+  s_3a1216b782efea::t_9f82b79fe62868 1
+tsconfig.json
+  s_3a1216b782efea::t_7fbb88c73b69cf 1-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0d14e17a9aca2e115ee138e9f2c07040c4271063",
+  "prompts": {},
+  "sessions": {
+    "s_3a1216b782efea": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f0bb5-2448-7f12-99c3-d27249db88b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Greggory Caines <gregg@caines.ca>"
+    }
+  }
+}
