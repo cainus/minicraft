@@ -30,11 +30,23 @@ type PlacedPiece = {
   rotation: number
 }
 
+type MovingPerson = {
+  group: THREE.Group
+  bubble: THREE.Sprite
+  bubbleY: number
+  originX: number
+  originZ: number
+  radius: number
+  speed: number
+  phase: number
+}
+
 const CELL = 1
 const ROOM_SIZE = 14
 const LAND_SIZE = 180
 const STORAGE_KEY = 'minicraft-room-v1'
 const objectMeshes = new Map<number, THREE.Group>()
+const movingPeople: MovingPerson[] = []
 
 const categories: Category[] = ['seating', 'tables', 'storage', 'sleep', 'kitchen', 'decor', 'plants', 'lighting', 'outdoor']
 
@@ -227,6 +239,16 @@ function addLandscape() {
   addPath(land, -72, -54, 68, 50, 5)
   addPath(land, 64, -58, -66, 58, 5)
 
+  const houses = [
+    [-31, 12], [-27, 18], [-22, 24], [28, 13], [34, 19], [42, 25], [-54, -30], [-62, -23],
+    [42, -25], [55, -22], [-38, 58], [-28, 62], [45, 54], [57, 48], [67, -3], [-72, 21],
+  ]
+  houses.forEach(([x, z], index) => addHouse(land, x, z, index))
+  for (let i = 0; i < 34; i++) {
+    const point = generatedPoint(i, 53, 80)
+    if (point && !isNearPlaza(point.x, point.z, 18)) addHouse(land, point.x, point.z, i + houses.length)
+  }
+
   const trees = [
     [-24, -23], [-20, -19], [-14, -24], [-7, -25], [14, -22], [22, -21], [25, -14], [-25, 0], [-22, 8],
     [-24, 19], [-17, 22], [-9, 21], [1, 24], [9, 22], [18, 20], [24, 17], [24, 2], [21, -5], [16, -2],
@@ -285,6 +307,32 @@ function addPath(parent: THREE.Group, x1: number, z1: number, x2: number, z2: nu
   }
 }
 
+function addHouse(parent: THREE.Group, x: number, z: number, index: number) {
+  const house = new THREE.Group()
+  house.position.set(x, 0, z)
+  house.rotation.y = (index % 4) * (Math.PI / 2)
+  parent.add(house)
+
+  const walls = ['#d9b98c', '#cfa37f', '#e0c497', '#bfc7a4'][index % 4]
+  const roof = ['#9e493e', '#6c7f9d', '#8b5f3f', '#5f7d55'][index % 4]
+  const width = 3.6 + (index % 3) * 0.5
+  const depth = 3.2 + ((index + 1) % 3) * 0.45
+  const height = 2.2 + (index % 2) * 0.35
+
+  addBlock(house, 0, height / 2, 0, width, height, depth, walls)
+  addBlock(house, 0, height + 0.45, 0, width + 0.55, 0.55, depth + 0.55, roof)
+  addBlock(house, 0, height + 0.85, 0, width - 0.45, 0.42, depth - 0.25, roof)
+  addBlock(house, 0, 0.72, depth / 2 + 0.04, 0.72, 1.25, 0.08, '#6b4b33')
+  addBlock(house, -width * 0.28, 1.45, depth / 2 + 0.05, 0.55, 0.5, 0.08, '#8fd2e8')
+  addBlock(house, width * 0.28, 1.45, depth / 2 + 0.05, 0.55, 0.5, 0.08, '#8fd2e8')
+  addBlock(house, -width / 2 - 0.08, 1.25, 0, 0.08, 0.48, 0.72, '#8fd2e8')
+  addBlock(house, width / 2 + 0.08, 1.25, 0, 0.08, 0.48, 0.72, '#8fd2e8')
+  addBlock(house, width * 0.28, height + 1.18, -depth * 0.18, 0.42, 0.78, 0.42, '#6d5140')
+  addBlock(house, 0, 0.035, depth / 2 + 1.05, 1.25, 0.04, 1.6, '#cdbf8e')
+  addFlower(house, -width / 2 - 0.45, depth / 2 + 0.2, '#e8526c')
+  addFlower(house, width / 2 + 0.45, depth / 2 + 0.2, '#f7c948')
+}
+
 function generatedPoint(index: number, offset: number, maxRadius: number) {
   const angle = (index + offset) * 2.399963
   const radius = 18 + ((index * 17 + offset) % maxRadius)
@@ -321,14 +369,77 @@ function addFlower(parent: THREE.Group, x: number, z: number, color: string) {
 }
 
 function addPerson(parent: THREE.Group, x: number, z: number, age: 'kid' | 'adult' | 'elder', index: number) {
+  const person = new THREE.Group()
+  person.position.set(x, 0, z)
+  person.rotation.y = (index % 8) * (Math.PI / 4)
+  parent.add(person)
+
   const scale = age === 'kid' ? 0.72 : age === 'elder' ? 0.88 : 1
   const shirt = ['#df6b57', '#3f78b5', '#55a36d', '#d9a23b', '#8f64bd'][index % 5]
-  addBlock(parent, x, 0.25 * scale, z, 0.28 * scale, 0.5 * scale, 0.22 * scale, '#4b5b6b')
-  addBlock(parent, x, 0.75 * scale, z, 0.42 * scale, 0.55 * scale, 0.28 * scale, shirt)
-  addBlock(parent, x, 1.17 * scale, z, 0.34 * scale, 0.34 * scale, 0.34 * scale, age === 'elder' ? '#d4b394' : '#bf855c')
-  addBlock(parent, x - 0.31 * scale, 0.75 * scale, z, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
-  addBlock(parent, x + 0.31 * scale, 0.75 * scale, z, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
-  if (age === 'elder') addBlock(parent, x + 0.48 * scale, 0.45 * scale, z + 0.18 * scale, 0.06, 0.9 * scale, 0.06, '#665842')
+  addBlock(person, 0, 0.25 * scale, 0, 0.28 * scale, 0.5 * scale, 0.22 * scale, '#4b5b6b')
+  addBlock(person, 0, 0.75 * scale, 0, 0.42 * scale, 0.55 * scale, 0.28 * scale, shirt)
+  addBlock(person, 0, 1.17 * scale, 0, 0.34 * scale, 0.34 * scale, 0.34 * scale, age === 'elder' ? '#d4b394' : '#bf855c')
+  addBlock(person, -0.31 * scale, 0.75 * scale, 0, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
+  addBlock(person, 0.31 * scale, 0.75 * scale, 0, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
+  if (age === 'elder') addBlock(person, 0.48 * scale, 0.45 * scale, 0.18 * scale, 0.06, 0.9 * scale, 0.06, '#665842')
+
+  const bubble = createSpeechBubble(['Hi!', 'Nice lake', 'Flowers!', 'Come play', 'Lovely day', 'Hello!'][index % 6])
+  const bubbleY = 1.85 * scale + 0.45
+  bubble.position.set(0, bubbleY, 0)
+  person.add(bubble)
+  movingPeople.push({
+    group: person,
+    bubble,
+    bubbleY,
+    originX: x,
+    originZ: z,
+    radius: 0.5 + (index % 5) * 0.16,
+    speed: 0.22 + (index % 7) * 0.025,
+    phase: index * 0.71,
+  })
+}
+
+function createSpeechBubble(message: string) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 128
+  const context = canvas.getContext('2d')!
+  context.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  context.strokeStyle = 'rgba(47, 61, 55, 0.35)'
+  context.lineWidth = 8
+  roundRect(context, 16, 18, 224, 72, 18)
+  context.fill()
+  context.stroke()
+  context.fillStyle = '#23312f'
+  context.font = 'bold 28px system-ui, sans-serif'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(message, 128, 54)
+  context.beginPath()
+  context.moveTo(108, 88)
+  context.lineTo(128, 116)
+  context.lineTo(150, 88)
+  context.closePath()
+  context.fillStyle = 'rgba(255, 255, 255, 0.92)'
+  context.fill()
+  const texture = new THREE.CanvasTexture(canvas)
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }))
+  sprite.scale.set(1.5, 0.75, 1)
+  return sprite
+}
+
+function roundRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  context.beginPath()
+  context.moveTo(x + radius, y)
+  context.lineTo(x + width - radius, y)
+  context.quadraticCurveTo(x + width, y, x + width, y + radius)
+  context.lineTo(x + width, y + height - radius)
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
+  context.lineTo(x + radius, y + height)
+  context.quadraticCurveTo(x, y + height, x, y + height - radius)
+  context.lineTo(x, y + radius)
+  context.quadraticCurveTo(x, y, x + radius, y)
+  context.closePath()
 }
 
 function addAnimal(parent: THREE.Group, x: number, z: number, animal: 'dog' | 'cat' | 'duck' | 'rabbit' | 'sheep' | 'cow' | 'bird', index: number) {
@@ -591,7 +702,22 @@ rebuildWorld()
 updatePreview()
 resize()
 
+function updateMovingPeople(time: number) {
+  for (const person of movingPeople) {
+    const t = time * person.speed + person.phase
+    const nextX = person.originX + Math.cos(t) * person.radius
+    const nextZ = person.originZ + Math.sin(t * 0.83) * person.radius
+    const dx = nextX - person.group.position.x
+    const dz = nextZ - person.group.position.z
+    person.group.position.set(nextX, 0, nextZ)
+    if (Math.abs(dx) + Math.abs(dz) > 0.0001) person.group.rotation.y = Math.atan2(dx, dz)
+    person.bubble.visible = Math.sin(time * 0.85 + person.phase) > 0.18
+    person.bubble.position.y = person.bubbleY + Math.sin(time * 2.2 + person.phase) * 0.04
+  }
+}
+
 function animate() {
+  updateMovingPeople(performance.now() / 1000)
   controls.update()
   renderer.render(scene, camera)
   requestAnimationFrame(animate)
