@@ -32,6 +32,7 @@ type PlacedPiece = {
 
 const CELL = 1
 const ROOM_SIZE = 14
+const LAND_SIZE = 58
 const STORAGE_KEY = 'minicraft-room-v1'
 const objectMeshes = new Map<number, THREE.Group>()
 
@@ -90,7 +91,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div class="hud">
         <div>
           <strong>Minicraft</strong>
-          <span id="status">Pick a decoration, then click the room.</span>
+          <span id="status">Pick a decoration, then click the garden plaza.</span>
         </div>
         <div class="hud-actions">
           <button id="rotate" type="button" title="Rotate selected piece">Rotate</button>
@@ -102,7 +103,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <aside class="tool-panel">
       <header>
         <h1>Decorate</h1>
-        <p>Blocky furniture, plants, lights, kitchen pieces, storage, art, and outdoor accents.</p>
+        <p>Decorate a lakeside voxel park filled with trees, flowers, families, kids, and elders.</p>
       </header>
       <div class="stats">
         <span><b id="piece-count">0</b> placed</span>
@@ -125,10 +126,10 @@ const clearButton = document.querySelector<HTMLButtonElement>('#clear')!
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#a7c7d7')
-scene.fog = new THREE.Fog('#a7c7d7', 18, 44)
+scene.fog = new THREE.Fog('#a7c7d7', 32, 78)
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
-camera.position.set(8.5, 7, 9.5)
+camera.position.set(13, 10, 15)
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -140,7 +141,7 @@ controls.target.set(0, 0.8, 0)
 controls.enableDamping = true
 controls.maxPolarAngle = Math.PI * 0.47
 controls.minDistance = 5
-controls.maxDistance = 21
+controls.maxDistance = 36
 controls.mouseButtons.RIGHT = THREE.MOUSE.PAN
 
 const raycaster = new THREE.Raycaster()
@@ -155,9 +156,11 @@ scene.add(placementPlane)
 const preview = new THREE.Group()
 scene.add(preview)
 
+addLandscape()
+
 const floor = new THREE.Mesh(
   new THREE.BoxGeometry(ROOM_SIZE, 0.18, ROOM_SIZE),
-  new THREE.MeshStandardMaterial({ color: '#d4c6a2', roughness: 0.85 }),
+  new THREE.MeshStandardMaterial({ color: '#d9c995', roughness: 0.85 }),
 )
 floor.position.y = -0.09
 floor.receiveShadow = true
@@ -166,10 +169,6 @@ scene.add(floor)
 const grid = new THREE.GridHelper(ROOM_SIZE, ROOM_SIZE, '#7d8b79', '#aeb79b')
 grid.position.y = 0.012
 scene.add(grid)
-
-addWall(0, 1.5, -ROOM_SIZE / 2, ROOM_SIZE, 3, 0.25, '#d9dccf')
-addWall(-ROOM_SIZE / 2, 1.5, 0, 0.25, 3, ROOM_SIZE, '#c9d5d6')
-addWall(ROOM_SIZE / 2, 0.45, 0, 0.18, 0.9, ROOM_SIZE, '#adbfb8')
 
 const sun = new THREE.DirectionalLight('#fff5df', 2.7)
 sun.position.set(4, 9, 6)
@@ -198,12 +197,124 @@ function piece(id: string, name: string, category: Category, icon: string, defau
   }
 }
 
-function addWall(x: number, y: number, z: number, w: number, h: number, d: number, color: string) {
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }))
-  wall.position.set(x, y, z)
-  wall.receiveShadow = true
-  wall.castShadow = true
-  scene.add(wall)
+function addBlock(parent: THREE.Group | THREE.Scene, x: number, y: number, z: number, w: number, h: number, d: number, color: string) {
+  const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.82 }))
+  block.position.set(x, y, z)
+  block.castShadow = true
+  block.receiveShadow = true
+  parent.add(block)
+  return block
+}
+
+function addLandscape() {
+  const land = new THREE.Group()
+  land.name = 'lakeside park'
+  scene.add(land)
+
+  addBlock(land, 0, -0.18, 0, LAND_SIZE, 0.26, LAND_SIZE, '#78ad5c')
+  addBlock(land, 0, -0.08, 0, ROOM_SIZE + 2.4, 0.08, ROOM_SIZE + 2.4, '#96b96c')
+
+  addLake(land, -18, -13, 12, 7)
+  addLake(land, 18, 10, 10, 6)
+  addLake(land, 6, -22, 8, 4.8)
+
+  for (let x = -22; x <= 22; x += 2) addBlock(land, x, 0.015, 8, 1.3, 0.03, 1.3, '#cdbf8e')
+  for (let z = -22; z <= 20; z += 2) addBlock(land, -9, 0.018, z, 1.15, 0.03, 1.15, '#cdbf8e')
+  for (let z = -18; z <= 18; z += 2) addBlock(land, 10, 0.018, z, 1.15, 0.03, 1.15, '#cdbf8e')
+
+  const trees = [
+    [-24, -23], [-20, -19], [-14, -24], [-7, -25], [14, -22], [22, -21], [25, -14], [-25, 0], [-22, 8],
+    [-24, 19], [-17, 22], [-9, 21], [1, 24], [9, 22], [18, 20], [24, 17], [24, 2], [21, -5], [16, -2],
+    [-18, -7], [-13, 14], [14, 15], [20, 7],
+  ]
+  trees.forEach(([x, z], index) => addTree(land, x, z, index % 3))
+
+  const flowers = ['#e8526c', '#f7c948', '#f28c3c', '#ffffff', '#9d6be8', '#55bcd6']
+  for (let i = 0; i < 96; i++) {
+    const angle = i * 2.399
+    const radius = 9 + (i % 18)
+    const x = Math.cos(angle) * radius + ((i % 5) - 2) * 0.4
+    const z = Math.sin(angle) * radius + ((i % 7) - 3) * 0.35
+    if (Math.abs(x) < 8 && Math.abs(z) < 8) continue
+    addFlower(land, x, z, flowers[i % flowers.length])
+  }
+
+  const people = [
+    [-7, 9, 'adult'], [-5.8, 9.8, 'kid'], [-4.8, 8.9, 'kid'], [8, 9, 'elder'], [9.2, 8.4, 'adult'],
+    [-13, -9, 'adult'], [-14.3, -8.2, 'elder'], [15, 4, 'kid'], [16, 5, 'kid'], [17, 4.4, 'adult'],
+    [3, -14, 'adult'], [4.2, -13.5, 'kid'], [21, 13, 'elder'], [-20, 13, 'adult'], [-18.8, 14, 'kid'],
+  ] as const
+  people.forEach(([x, z, age], index) => addPerson(land, x, z, age, index))
+
+  const animals = [
+    [-20, -9, 'duck'], [-18.8, -8.6, 'duck'], [-17.6, -9.2, 'duck'], [17, 7, 'duck'], [18.3, 6.6, 'duck'],
+    [-2, 12, 'dog'], [2, 11, 'cat'], [12, -12, 'rabbit'], [13.2, -11.2, 'rabbit'], [-15, 18, 'sheep'],
+    [-13.7, 18.6, 'sheep'], [22, -7, 'cow'], [20.4, -8.2, 'cow'], [6, 20, 'bird'], [7.4, 21, 'bird'],
+    [-23, 4, 'dog'], [-21.8, 5, 'cat'], [24, 12, 'rabbit'],
+  ] as const
+  animals.forEach(([x, z, animal], index) => addAnimal(land, x, z, animal, index))
+}
+
+function addLake(parent: THREE.Group, x: number, z: number, w: number, d: number) {
+  addBlock(parent, x, -0.045, z, w + 1.5, 0.05, d + 1.5, '#6aa06d')
+  const water = addBlock(parent, x, 0.005, z, w, 0.04, d, '#4e9fd0')
+  ;(water.material as THREE.MeshStandardMaterial).metalness = 0.05
+  ;(water.material as THREE.MeshStandardMaterial).roughness = 0.28
+  addBlock(parent, x - w * 0.2, 0.04, z + d * 0.18, w * 0.35, 0.025, d * 0.18, '#77bce0')
+}
+
+function addTree(parent: THREE.Group, x: number, z: number, variant: number) {
+  const height = 1.7 + variant * 0.25
+  addBlock(parent, x, height / 2, z, 0.42, height, 0.42, '#7a5737')
+  addBlock(parent, x, height + 0.55, z, 1.8, 1.15, 1.8, variant === 1 ? '#2f7d46' : '#3f8e48')
+  addBlock(parent, x - 0.45, height + 1, z + 0.25, 1.25, 0.9, 1.25, '#4d9c4f')
+  addBlock(parent, x + 0.55, height + 0.85, z - 0.25, 1.15, 0.85, 1.15, '#377e41')
+}
+
+function addFlower(parent: THREE.Group, x: number, z: number, color: string) {
+  addBlock(parent, x, 0.16, z, 0.06, 0.32, 0.06, '#3d7c3e')
+  addBlock(parent, x, 0.36, z, 0.24, 0.14, 0.24, color)
+}
+
+function addPerson(parent: THREE.Group, x: number, z: number, age: 'kid' | 'adult' | 'elder', index: number) {
+  const scale = age === 'kid' ? 0.72 : age === 'elder' ? 0.88 : 1
+  const shirt = ['#df6b57', '#3f78b5', '#55a36d', '#d9a23b', '#8f64bd'][index % 5]
+  addBlock(parent, x, 0.25 * scale, z, 0.28 * scale, 0.5 * scale, 0.22 * scale, '#4b5b6b')
+  addBlock(parent, x, 0.75 * scale, z, 0.42 * scale, 0.55 * scale, 0.28 * scale, shirt)
+  addBlock(parent, x, 1.17 * scale, z, 0.34 * scale, 0.34 * scale, 0.34 * scale, age === 'elder' ? '#d4b394' : '#bf855c')
+  addBlock(parent, x - 0.31 * scale, 0.75 * scale, z, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
+  addBlock(parent, x + 0.31 * scale, 0.75 * scale, z, 0.12 * scale, 0.44 * scale, 0.12 * scale, '#bf855c')
+  if (age === 'elder') addBlock(parent, x + 0.48 * scale, 0.45 * scale, z + 0.18 * scale, 0.06, 0.9 * scale, 0.06, '#665842')
+}
+
+function addAnimal(parent: THREE.Group, x: number, z: number, animal: 'dog' | 'cat' | 'duck' | 'rabbit' | 'sheep' | 'cow' | 'bird', index: number) {
+  const colors = {
+    dog: '#9b673f',
+    cat: '#5d6268',
+    duck: '#f0d34f',
+    rabbit: '#e7e1d6',
+    sheep: '#f2eee2',
+    cow: '#f4efe5',
+    bird: '#4e83b8',
+  }
+  const body = colors[animal]
+  const size = animal === 'cow' ? 1.25 : animal === 'sheep' ? 1 : animal === 'duck' || animal === 'bird' ? 0.5 : 0.72
+  const y = 0.22 * size
+  addBlock(parent, x, y, z, 0.85 * size, 0.42 * size, 0.42 * size, body)
+  addBlock(parent, x + 0.43 * size, y + 0.16 * size, z, 0.32 * size, 0.32 * size, 0.32 * size, body)
+  addBlock(parent, x - 0.28 * size, 0.09 * size, z - 0.18 * size, 0.12 * size, 0.18 * size, 0.1 * size, '#3d332a')
+  addBlock(parent, x + 0.18 * size, 0.09 * size, z - 0.18 * size, 0.12 * size, 0.18 * size, 0.1 * size, '#3d332a')
+  addBlock(parent, x - 0.28 * size, 0.09 * size, z + 0.18 * size, 0.12 * size, 0.18 * size, 0.1 * size, '#3d332a')
+  addBlock(parent, x + 0.18 * size, 0.09 * size, z + 0.18 * size, 0.12 * size, 0.18 * size, 0.1 * size, '#3d332a')
+  if (animal === 'duck' || animal === 'bird') addBlock(parent, x + 0.67 * size, y + 0.12 * size, z, 0.18 * size, 0.12 * size, 0.16 * size, '#e88332')
+  if (animal === 'rabbit') {
+    addBlock(parent, x + 0.48 * size, y + 0.5 * size, z - 0.09 * size, 0.1 * size, 0.38 * size, 0.08 * size, body)
+    addBlock(parent, x + 0.48 * size, y + 0.5 * size, z + 0.09 * size, 0.1 * size, 0.38 * size, 0.08 * size, body)
+  }
+  if (animal === 'cow') {
+    addBlock(parent, x - 0.18, y + 0.12, z + 0.22, 0.28, 0.2, 0.08, index % 2 ? '#2f2d2a' : '#8a5639')
+    addBlock(parent, x + 0.2, y + 0.04, z - 0.22, 0.22, 0.18, 0.08, '#2f2d2a')
+  }
 }
 
 function makePieceGroup(pieceDef: Piece, objectId?: number) {
