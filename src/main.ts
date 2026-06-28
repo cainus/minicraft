@@ -32,7 +32,7 @@ type PlacedPiece = {
 
 const CELL = 1
 const ROOM_SIZE = 14
-const LAND_SIZE = 58
+const LAND_SIZE = 180
 const STORAGE_KEY = 'minicraft-room-v1'
 const objectMeshes = new Map<number, THREE.Group>()
 
@@ -126,10 +126,10 @@ const clearButton = document.querySelector<HTMLButtonElement>('#clear')!
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#a7c7d7')
-scene.fog = new THREE.Fog('#a7c7d7', 32, 78)
+scene.fog = new THREE.Fog('#a7c7d7', 80, 210)
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
-camera.position.set(13, 10, 15)
+camera.position.set(24, 18, 27)
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -141,7 +141,7 @@ controls.target.set(0, 0.8, 0)
 controls.enableDamping = true
 controls.maxPolarAngle = Math.PI * 0.47
 controls.minDistance = 5
-controls.maxDistance = 36
+controls.maxDistance = 92
 controls.mouseButtons.RIGHT = THREE.MOUSE.PAN
 
 const raycaster = new THREE.Raycaster()
@@ -174,10 +174,10 @@ const sun = new THREE.DirectionalLight('#fff5df', 2.7)
 sun.position.set(4, 9, 6)
 sun.castShadow = true
 sun.shadow.mapSize.set(2048, 2048)
-sun.shadow.camera.left = -10
-sun.shadow.camera.right = 10
-sun.shadow.camera.top = 10
-sun.shadow.camera.bottom = -10
+sun.shadow.camera.left = -42
+sun.shadow.camera.right = 42
+sun.shadow.camera.top = 42
+sun.shadow.camera.bottom = -42
 scene.add(sun)
 scene.add(new THREE.HemisphereLight('#d8edff', '#80705a', 1.5))
 
@@ -214,13 +214,18 @@ function addLandscape() {
   addBlock(land, 0, -0.18, 0, LAND_SIZE, 0.26, LAND_SIZE, '#78ad5c')
   addBlock(land, 0, -0.08, 0, ROOM_SIZE + 2.4, 0.08, ROOM_SIZE + 2.4, '#96b96c')
 
-  addLake(land, -18, -13, 12, 7)
-  addLake(land, 18, 10, 10, 6)
-  addLake(land, 6, -22, 8, 4.8)
+  const lakes = [
+    [-18, -13, 12, 7], [18, 10, 10, 6], [6, -22, 8, 4.8], [-58, -47, 24, 13], [-46, 43, 18, 11],
+    [51, -37, 22, 14], [61, 38, 20, 12], [-3, 58, 28, 10], [-70, 6, 14, 8], [34, 66, 16, 9],
+    [-12, -66, 20, 11],
+  ]
+  lakes.forEach(([x, z, w, d]) => addLake(land, x, z, w, d))
 
-  for (let x = -22; x <= 22; x += 2) addBlock(land, x, 0.015, 8, 1.3, 0.03, 1.3, '#cdbf8e')
-  for (let z = -22; z <= 20; z += 2) addBlock(land, -9, 0.018, z, 1.15, 0.03, 1.15, '#cdbf8e')
-  for (let z = -18; z <= 18; z += 2) addBlock(land, 10, 0.018, z, 1.15, 0.03, 1.15, '#cdbf8e')
+  addPath(land, -78, 8, 78, 8, 2)
+  addPath(land, -9, -78, -9, 78, 2)
+  addPath(land, 10, -72, 10, 72, 2)
+  addPath(land, -72, -54, 68, 50, 5)
+  addPath(land, 64, -58, -66, 58, 5)
 
   const trees = [
     [-24, -23], [-20, -19], [-14, -24], [-7, -25], [14, -22], [22, -21], [25, -14], [-25, 0], [-22, 8],
@@ -229,10 +234,15 @@ function addLandscape() {
   ]
   trees.forEach(([x, z], index) => addTree(land, x, z, index % 3))
 
+  for (let i = 0; i < 170; i++) {
+    const point = generatedPoint(i, 21, 86)
+    if (point && !isNearPlaza(point.x, point.z, 12)) addTree(land, point.x, point.z, i % 3)
+  }
+
   const flowers = ['#e8526c', '#f7c948', '#f28c3c', '#ffffff', '#9d6be8', '#55bcd6']
-  for (let i = 0; i < 96; i++) {
+  for (let i = 0; i < 520; i++) {
     const angle = i * 2.399
-    const radius = 9 + (i % 18)
+    const radius = 9 + (i % 78)
     const x = Math.cos(angle) * radius + ((i % 5) - 2) * 0.4
     const z = Math.sin(angle) * radius + ((i % 7) - 3) * 0.35
     if (Math.abs(x) < 8 && Math.abs(z) < 8) continue
@@ -246,6 +256,12 @@ function addLandscape() {
   ] as const
   people.forEach(([x, z, age], index) => addPerson(land, x, z, age, index))
 
+  const ages = ['kid', 'adult', 'elder'] as const
+  for (let i = 0; i < 70; i++) {
+    const point = generatedPoint(i, 91, 82)
+    if (point && !isNearPlaza(point.x, point.z, 9)) addPerson(land, point.x, point.z, ages[i % ages.length], i + people.length)
+  }
+
   const animals = [
     [-20, -9, 'duck'], [-18.8, -8.6, 'duck'], [-17.6, -9.2, 'duck'], [17, 7, 'duck'], [18.3, 6.6, 'duck'],
     [-2, 12, 'dog'], [2, 11, 'cat'], [12, -12, 'rabbit'], [13.2, -11.2, 'rabbit'], [-15, 18, 'sheep'],
@@ -253,6 +269,34 @@ function addLandscape() {
     [-23, 4, 'dog'], [-21.8, 5, 'cat'], [24, 12, 'rabbit'],
   ] as const
   animals.forEach(([x, z, animal], index) => addAnimal(land, x, z, animal, index))
+
+  const animalTypes = ['dog', 'cat', 'duck', 'rabbit', 'sheep', 'cow', 'bird'] as const
+  for (let i = 0; i < 115; i++) {
+    const point = generatedPoint(i, 137, 84)
+    if (point && !isNearPlaza(point.x, point.z, 10)) addAnimal(land, point.x, point.z, animalTypes[i % animalTypes.length], i + animals.length)
+  }
+}
+
+function addPath(parent: THREE.Group, x1: number, z1: number, x2: number, z2: number, steps: number) {
+  const count = Math.max(2, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / steps))
+  for (let i = 0; i <= count; i++) {
+    const t = i / count
+    addBlock(parent, THREE.MathUtils.lerp(x1, x2, t), 0.018, THREE.MathUtils.lerp(z1, z2, t), 1.4, 0.035, 1.4, '#cdbf8e')
+  }
+}
+
+function generatedPoint(index: number, offset: number, maxRadius: number) {
+  const angle = (index + offset) * 2.399963
+  const radius = 18 + ((index * 17 + offset) % maxRadius)
+  const x = Math.cos(angle) * radius + (((index + offset) % 9) - 4) * 0.55
+  const z = Math.sin(angle) * radius + (((index * 3 + offset) % 11) - 5) * 0.48
+  const half = LAND_SIZE / 2 - 4
+  if (Math.abs(x) > half || Math.abs(z) > half) return null
+  return { x, z }
+}
+
+function isNearPlaza(x: number, z: number, padding: number) {
+  return Math.abs(x) < ROOM_SIZE / 2 + padding && Math.abs(z) < ROOM_SIZE / 2 + padding
 }
 
 function addLake(parent: THREE.Group, x: number, z: number, w: number, d: number) {

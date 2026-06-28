@@ -5,7 +5,7 @@ A TypeScript WebGL decoration game inspired by blocky voxel builders.
 ## Features
 
 - 3D room editing with Three.js
-- Beautiful outdoor voxel park with several lakes, paths, flowers, and tree clusters
+- Huge outdoor voxel park with many lakes, long paths, flower fields, and tree clusters
 - Many voxel people including adults, kids, and elders
 - Many voxel animals including dogs, cats, ducks, rabbits, sheep, cows, and birds
 - 36 furniture and decoration pieces across seating, tables, storage, sleep, kitchen, decor, plants, lighting, and outdoor categories
