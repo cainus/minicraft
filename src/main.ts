@@ -51,7 +51,7 @@ type AvatarClothes = {
 
 const CELL = 1
 const ROOM_SIZE = 14
-const LAND_SIZE = 180
+const LAND_SIZE = 420
 const STORAGE_KEY = 'minicraft-room-v1'
 const AVATAR_STORAGE_KEY = 'minicraft-avatar-v1'
 const objectMeshes = new Map<number, THREE.Group>()
@@ -180,10 +180,10 @@ const avatarInputs: Record<keyof AvatarClothes, HTMLInputElement> = {
 
 const scene = new THREE.Scene()
 scene.background = new THREE.Color('#a7c7d7')
-scene.fog = new THREE.Fog('#a7c7d7', 80, 210)
+scene.fog = new THREE.Fog('#a7c7d7', 120, 460)
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
-camera.position.set(24, 18, 27)
+camera.position.set(18, 42, 22)
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -193,9 +193,9 @@ renderer.shadowMap.type = THREE.PCFShadowMap
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.target.set(0, 0.8, 0)
 controls.enableDamping = true
-controls.maxPolarAngle = Math.PI * 0.47
+controls.maxPolarAngle = Math.PI * 0.34
 controls.minDistance = 5
-controls.maxDistance = 92
+controls.maxDistance = 150
 controls.mouseButtons.RIGHT = THREE.MOUSE.PAN
 
 const raycaster = new THREE.Raycaster()
